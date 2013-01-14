@@ -1,0 +1,71 @@
+#!/bin/bash
+# Sets a random desktop wallpaper
+# 
+# This is part of randoback, a utility that sets random wallpapers
+# Copyright (C) 2013 Sage A. Imel
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# 
+# To contact Sage A. Imel, see his website at:
+#  http://sagenite.net.
+# 
+# 
+
+#Configurable options
+bg_util='feh --bg-fill'
+search_term=''
+wallpaper_dir="$HOME/Pictures/"
+
+#Read settings from config file
+if [ -e $HOME/.randoback ];then
+    . $HOME/.randoback
+fi
+
+#Override search_term with argument if one is supplied
+if [ $# -gt 0 ];then
+    search_term="$@"
+fi
+
+#Expand spaces to match any sequence
+search_term=".*$(echo $search_term | sed 's/ /.*/g').*"
+
+#name temp file and set cleanup
+temp_file="/tmp/randoback-$$"
+
+cleanup() {
+    rm $temp_file
+}
+trap 'cleanup' EXIT
+
+#Attempt to find a random background
+find $wallpaper_dir -type f -iregex "$search_term" > $temp_file
+num_results=$(cat $temp_file | wc -l)
+case $num_results in
+    0)
+        exit
+        ;;
+    1)
+        random_num=1
+        ;;
+    *)
+        random_num="$((1 + $(($RANDOM % $num_results))))"
+        ;;
+esac
+bg="$(cat $temp_file | tail -n $random_num | head -n 1)"
+
+#Attempt to set the random background
+if test -e "$bg" && file "$bg" | grep -i image > /dev/null;then
+    $bg_util "$bg";
+fi
